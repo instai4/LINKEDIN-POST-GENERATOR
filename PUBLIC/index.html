@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LINKEDIN.exe | AI Post Generator | by Anurag Rajput</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230a66c2'/%3E%3Ctext x='18' y='72' font-size='62' font-family='serif' font-weight='bold' fill='white'%3Ein%3C/text%3E%3C/svg%3E">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#070d14;--bg2:#0a1220;--card:#0d1826;--surface:#111f30;
+      --border:#1a2f48;--border2:#1e3a5f;
+      --txt:#d6e8ff;--txt2:#7a9fc4;--txt3:#3a5a7a;
+      --blue:#0a66c2;--blue2:#1a8fff;--blue3:#4db8ff;
+      --cyan:#00c8ff;--teal:#00b4d8;
+      --gold:#f0c040;--green:#00e676;--red:#ff4444;
+      --ff:'Syne',sans-serif;--fb:'Outfit',sans-serif;--fm:'DM Mono',monospace;
+      --spring:cubic-bezier(.34,1.56,.64,1);
+    }
+
+    html{scroll-behavior:smooth}
+    body{
+      font-family:var(--fb);background:var(--bg);color:var(--txt);
+      min-height:100vh;overflow-x:hidden;cursor:none;
+    }
+
+    /* circuit grid bg */
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:
+        linear-gradient(rgba(10,102,194,.06) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(10,102,194,.06) 1px,transparent 1px);
+      background-size:44px 44px}
+    body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(10,102,194,.12),transparent 70%)}
+
+    /* CURSOR */
+    #cursor{pointer-events:none;position:fixed;z-index:9999;
+      width:12px;height:12px;border-radius:50%;
+      border:2px solid var(--blue2);
+      background:rgba(10,102,194,.2);
+      transform:translate(-50%,-50%);
+      transition:width .12s var(--spring),height .12s var(--spring),background .12s}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;height:56px;
+      background:rgba(7,13,20,.95);border-bottom:1px solid var(--border);
+      backdrop-filter:blur(20px);
+      display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem}
+    .nav-brand{display:flex;align-items:center;gap:.55rem;text-decoration:none}
+    .nav-logo-svg{width:36px;height:36px;flex-shrink:0;
+      filter:drop-shadow(0 0 8px rgba(10,102,194,.6));
+      transition:filter .2s}
+    .nav-brand:hover .nav-logo-svg{filter:drop-shadow(0 0 16px rgba(26,143,255,.9))}
+    .nav-title{font-family:var(--ff);font-size:1rem;font-weight:800;
+      background:linear-gradient(90deg,var(--blue2),var(--cyan));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;letter-spacing:.06em}
+    .nav-right{display:flex;align-items:center;gap:.5rem}
+    .nav-badge{font-family:var(--fm);font-size:.55rem;color:var(--txt3);
+      background:var(--surface);border:1px solid var(--border);
+      padding:3px 8px;border-radius:20px;letter-spacing:.08em}
+    .nav-link{width:30px;height:30px;border-radius:6px;background:var(--surface);
+      border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+      color:var(--txt2);font-size:.75rem;text-decoration:none;transition:all .12s}
+    .nav-link:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+    /* WRAPPER */
+    .wrapper{position:relative;z-index:1;width:100%;max-width:1100px;
+      margin:0 auto;padding:72px 1.2rem 3rem;
+      display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;
+      align-items:start}
+    @media(max-width:768px){.wrapper{grid-template-columns:1fr}}
+
+    /* full-width rows */
+    .full{grid-column:1/-1}
+
+    /* HERO */
+    .hero{text-align:center;padding:1.2rem 0 .4rem;
+      display:flex;flex-direction:column;align-items:center;gap:.6rem}
+    .hero-eyebrow{font-family:var(--fm);font-size:.58rem;color:var(--blue3);
+      letter-spacing:.22em;text-transform:uppercase;
+      display:flex;align-items:center;gap:.5rem}
+    .hero-eyebrow span{width:24px;height:1px;background:var(--blue3);opacity:.5}
+    .hero-title{font-family:var(--ff);font-size:clamp(2.8rem,8vw,4.8rem);
+      font-weight:800;letter-spacing:-.03em;line-height:.9;text-transform:uppercase}
+    .hero-title .hl{
+      background:linear-gradient(90deg,var(--blue2),var(--cyan));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-sub{font-family:var(--fm);font-size:.7rem;color:var(--txt3);
+      letter-spacing:.15em;text-transform:uppercase}
+
+    /* SECTION CARD */
+    .sec-card{background:var(--card);border:1px solid var(--border);
+      border-radius:12px;padding:1.2rem;
+      display:flex;flex-direction:column;gap:.9rem}
+    .sec-card.highlight{border-color:var(--border2);
+      box-shadow:0 0 30px rgba(10,102,194,.08)}
+
+    /* SECTION LABEL */
+    .sec-lbl{font-family:var(--fm);font-size:.56rem;color:var(--txt3);
+      text-transform:uppercase;letter-spacing:.18em;
+      display:flex;align-items:center;gap:.4rem}
+    .sec-lbl i{color:var(--blue2);font-size:.6rem}
+
+    /* POST TYPE CHIPS */
+    .type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}
+    @media(max-width:420px){.type-grid{grid-template-columns:repeat(2,1fr)}}
+    .type-chip{padding:.5rem .4rem;border-radius:8px;border:1px solid var(--border2);
+      background:var(--surface);color:var(--txt2);
+      font-family:var(--fm);font-size:.6rem;font-weight:700;
+      cursor:pointer;text-align:center;text-transform:uppercase;letter-spacing:.06em;
+      transition:all .15s var(--spring);display:flex;flex-direction:column;
+      align-items:center;gap:.3rem}
+    .type-chip i{font-size:1rem;color:var(--txt3);transition:color .15s}
+    .type-chip:hover{border-color:var(--blue2);color:var(--txt);background:rgba(10,102,194,.06)}
+    .type-chip:hover i{color:var(--blue2)}
+    .type-chip.active{border-color:var(--blue2);color:var(--blue2);
+      background:rgba(10,102,194,.1);
+      box-shadow:0 0 12px rgba(10,102,194,.15)}
+    .type-chip.active i{color:var(--blue2)}
+
+    /* TEXTAREA */
+    textarea,input[type=text]{
+      width:100%;padding:.8rem 1rem;border-radius:8px;
+      border:1px solid var(--border2);background:var(--bg2);
+      color:var(--txt);font-family:var(--fb);font-size:.88rem;
+      outline:none;resize:vertical;
+      transition:border-color .15s,box-shadow .15s;line-height:1.6}
+    textarea:focus,input[type=text]:focus{
+      border-color:var(--blue2);box-shadow:0 0 0 3px rgba(10,102,194,.12)}
+    textarea::placeholder,input::placeholder{color:var(--txt3)}
+    textarea{min-height:110px}
+
+    /* TONE SELECTOR */
+    .tone-row{display:flex;gap:.4rem}
+    .tone-btn{flex:1;padding:.55rem .4rem;border-radius:8px;
+      border:1px solid var(--border2);background:var(--surface);
+      color:var(--txt2);font-family:var(--fm);font-size:.58rem;font-weight:700;
+      cursor:pointer;text-align:center;text-transform:uppercase;letter-spacing:.08em;
+      transition:all .15s var(--spring)}
+    .tone-btn:hover{border-color:var(--blue2);color:var(--txt)}
+    .tone-btn[data-t="professional"].active{
+      border-color:var(--blue2);color:var(--blue2);background:rgba(10,102,194,.1)}
+    .tone-btn[data-t="casual"].active{
+      border-color:var(--teal);color:var(--teal);background:rgba(0,180,216,.1)}
+    .tone-btn[data-t="viral"].active{
+      border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08)}
+
+    /* TOGGLES ROW */
+    .toggles-row{display:flex;gap:.6rem;flex-wrap:wrap}
+    .toggle-item{display:flex;align-items:center;gap:.45rem;cursor:pointer;
+      font-family:var(--fm);font-size:.6rem;color:var(--txt2);
+      text-transform:uppercase;letter-spacing:.08em;user-select:none}
+    .toggle-item input[type=checkbox]{
+      width:16px;height:16px;accent-color:var(--blue2);cursor:pointer;
+      border-radius:3px}
+
+    /* GENERATE BUTTON */
+    .gen-btn{width:100%;padding:1rem;border-radius:10px;
+      border:2px solid var(--blue2);background:var(--blue);
+      color:#fff;font-family:var(--ff);font-size:1.05rem;font-weight:800;
+      cursor:pointer;letter-spacing:.07em;text-transform:uppercase;
+      box-shadow:5px 5px 0 rgba(10,102,194,.25);
+      transition:all .18s var(--spring);
+      display:flex;align-items:center;justify-content:center;gap:.6rem}
+    .gen-btn:hover{transform:translate(-2px,-2px);
+      box-shadow:8px 8px 0 rgba(10,102,194,.3);background:var(--blue2)}
+    .gen-btn:active{transform:translate(1px,1px);box-shadow:none}
+    .gen-btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+    /* LOADING */
+    .loading-bar{height:3px;background:var(--surface);border-radius:2px;
+      overflow:hidden;display:none;margin-top:.2rem}
+    .loading-bar.show{display:block}
+    .loading-fill{height:100%;
+      background:linear-gradient(90deg,var(--blue),var(--cyan),var(--blue));
+      background-size:200%;animation:shimmer 1.2s linear infinite}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* OUTPUT PANEL */
+    .output-panel{display:none;flex-direction:column;gap:1rem;animation:panel-in .35s var(--spring)}
+    .output-panel.show{display:flex}
+    @keyframes panel-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+    /* POST PREVIEW CARD */
+    .post-card{background:var(--card);border:1px solid var(--border2);
+      border-radius:12px;overflow:hidden}
+    .post-card-header{background:var(--surface);border-bottom:1px solid var(--border);
+      padding:.7rem 1rem;display:flex;align-items:center;gap:.7rem}
+    .post-avatar{width:36px;height:36px;border-radius:50%;
+      background:linear-gradient(135deg,var(--blue),var(--cyan));
+      display:flex;align-items:center;justify-content:center;
+      font-family:var(--ff);font-size:.85rem;font-weight:800;color:#fff;flex-shrink:0}
+    .post-author{flex:1}
+    .post-author-name{font-family:var(--ff);font-size:.82rem;font-weight:800;color:var(--txt)}
+    .post-author-sub{font-family:var(--fm);font-size:.55rem;color:var(--txt3);margin-top:.1rem}
+    .post-linkedin-badge{font-size:.9rem;color:var(--blue2)}
+
+    /* tab switcher on card */
+    .post-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2)}
+    .post-tab{padding:.55rem .9rem;font-family:var(--fm);font-size:.58rem;font-weight:700;
+      text-transform:uppercase;letter-spacing:.1em;color:var(--txt3);
+      cursor:pointer;border:none;background:transparent;
+      border-bottom:2px solid transparent;transition:all .12s}
+    .post-tab:hover{color:var(--txt2)}
+    .post-tab.active{color:var(--blue2);border-bottom-color:var(--blue2)}
+
+    /* post body */
+    .post-body{padding:1rem;min-height:160px;position:relative}
+    .post-text{font-family:var(--fb);font-size:.88rem;color:var(--txt);
+      line-height:1.75;white-space:pre-wrap;word-break:break-word}
+    .post-text .hook{color:var(--blue3);font-weight:700}
+
+    /* editable overlay hint */
+    .post-body[contenteditable="true"]{outline:none}
+    .post-body[contenteditable="true"]:focus{
+      background:rgba(10,102,194,.03);border-radius:0 0 12px 12px}
+
+    /* char count */
+    .char-bar{display:flex;align-items:center;justify-content:space-between;
+      padding:.5rem 1rem;border-top:1px solid var(--border);
+      background:var(--bg2)}
+    .char-count{font-family:var(--fm);font-size:.58rem;color:var(--txt3)}
+    .char-count.warn{color:var(--gold)}
+    .char-count.over{color:var(--red)}
+    .char-fill-wrap{flex:1;height:3px;background:var(--border);
+      border-radius:2px;margin:0 .6rem;overflow:hidden}
+    .char-fill{height:100%;border-radius:2px;background:var(--blue2);
+      transition:width .3s ease,background .3s}
+
+    /* HASHTAGS */
+    .hashtag-wrap{display:flex;flex-wrap:wrap;gap:.35rem;padding:.65rem 1rem;
+      border-top:1px solid var(--border)}
+    .hashtag{font-family:var(--fm);font-size:.62rem;font-weight:700;
+      color:var(--blue2);background:rgba(10,102,194,.1);
+      border:1px solid rgba(10,102,194,.25);
+      padding:3px 10px;border-radius:20px;cursor:pointer;
+      transition:all .12s;user-select:none}
+    .hashtag:hover{background:rgba(10,102,194,.2);border-color:var(--blue2)}
+
+    /* HOOKS PANEL */
+    .hooks-panel{background:var(--card);border:1px solid var(--border);
+      border-radius:10px;padding:1rem}
+    .hook-item{padding:.6rem .8rem;border-radius:7px;border:1px solid var(--border);
+      background:var(--surface);margin-bottom:.4rem;cursor:pointer;
+      font-family:var(--fb);font-size:.8rem;color:var(--txt2);
+      transition:all .12s;display:flex;align-items:flex-start;gap:.5rem;line-height:1.5}
+    .hook-item:last-child{margin-bottom:0}
+    .hook-item:hover{border-color:var(--blue2);color:var(--txt);background:rgba(10,102,194,.06)}
+    .hook-item i{color:var(--blue2);font-size:.65rem;margin-top:.15rem;flex-shrink:0}
+
+    /* ACTIONS */
+    .actions-row{display:flex;gap:.5rem;flex-wrap:wrap}
+    .act-btn{flex:1;min-width:110px;padding:.6rem .9rem;border-radius:7px;
+      border:1px solid var(--border2);background:var(--surface);
+      color:var(--txt2);font-family:var(--fm);font-size:.6rem;font-weight:700;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;
+      transition:all .12s;text-transform:uppercase;letter-spacing:.07em}
+    .act-btn:hover{transform:translate(-1px,-1px);border-color:var(--blue2);color:var(--blue2)}
+    .act-btn.linkedin-share:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .act-btn.copied{color:var(--green)!important;border-color:var(--green)!important}
+
+    /* FOOTER */
+    .footer-bar{position:relative;z-index:1;width:100%;max-width:1100px;
+      margin:0 auto;display:flex;align-items:center;justify-content:space-between;
+      padding:.6rem 1.2rem;border-top:1px solid var(--border);flex-wrap:wrap;gap:.4rem}
+    .footer-credit{font-family:var(--fm);font-size:.58rem;color:var(--txt3)}
+    .footer-credit a{color:var(--blue2);text-decoration:none;font-weight:700}
+    .footer-links{display:flex;gap:.4rem}
+    .footer-links a{width:26px;height:26px;border-radius:6px;background:var(--surface);
+      border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+      color:var(--txt3);font-size:.72rem;text-decoration:none;transition:all .12s}
+    .footer-links a:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+  </style>
+</head>
+<body>
+<div id="cursor"></div>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="#">
+    <svg class="nav-logo-svg" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- LinkedIn 'in' letterform, deconstructed -->
+      <!-- Vertical bar -->
+      <rect x="7" y="10" width="5" height="18" rx="1.5" fill="#1a8fff"/>
+      <!-- Top dot -->
+      <circle cx="9.5" cy="6.5" r="3" fill="#1a8fff"/>
+      <!-- L shape right arm -->
+      <rect x="16" y="10" width="5" height="18" rx="1.5" fill="#1a8fff" opacity=".85"/>
+      <!-- Curve top of n -->
+      <path d="M21 15.5 Q21 10 27.5 10 Q34 10 34 15.5 L34 28" stroke="#1a8fff" stroke-width="5" stroke-linecap="round" fill="none" opacity=".85"/>
+      <!-- Outer glow ring -->
+      <rect x="1.5" y="1.5" width="35" height="35" rx="8" stroke="#1a8fff" stroke-width="1.2" opacity=".2"/>
+      <!-- Corner accents -->
+      <path d="M1.5 9 L1.5 1.5 L9 1.5" stroke="#4db8ff" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".5"/>
+      <path d="M29 1.5 L36.5 1.5 L36.5 9" stroke="#4db8ff" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".5"/>
+    </svg>
+    <span class="nav-title">LINKEDIN.exe</span>
+  </a>
+  <div class="nav-right">
+    <span class="nav-badge">AI Post Generator &middot; ANURAG.exe</span>
+    <a class="nav-link" href="https://github.com/instai4" target="_blank"><i class="fa-brands fa-github"></i></a>
+    <a class="nav-link" href="https://instai4.github.io/PORT-FOLIO/" target="_blank"><i class="fa-solid fa-globe"></i></a>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+  <!-- HERO -->
+  <div class="hero full">
+    <div class="hero-eyebrow"><span></span> AI-Powered Content Engine <span></span></div>
+    <h1 class="hero-title">LINKEDIN<span class="hl">.exe</span></h1>
+    <span class="hero-sub">Stop staring at a blank post box &mdash; let AI do the cringe for you</span>
+  </div>
+
+  <!-- LEFT COLUMN — INPUT -->
+  <div style="display:flex;flex-direction:column;gap:1rem">
+
+    <!-- POST TYPE -->
+    <div class="sec-card">
+      <div class="sec-lbl"><i class="fa-solid fa-tag"></i> Post Type</div>
+      <div class="type-grid">
+        <div class="type-chip active" data-type="topic" onclick="setType(this)">
+          <i class="fa-solid fa-lightbulb"></i> Topic / Idea
+        </div>
+        <div class="type-chip" data-type="project" onclick="setType(this)">
+          <i class="fa-solid fa-rocket"></i> Project
+        </div>
+        <div class="type-chip" data-type="job" onclick="setType(this)">
+          <i class="fa-solid fa-briefcase"></i> Job Update
+        </div>
+        <div class="type-chip" data-type="achievement" onclick="setType(this)">
+          <i class="fa-solid fa-trophy"></i> Achievement
+        </div>
+        <div class="type-chip" data-type="opinion" onclick="setType(this)">
+          <i class="fa-solid fa-fire"></i> Hot Take
+        </div>
+        <div class="type-chip" data-type="custom" onclick="setType(this)">
+          <i class="fa-solid fa-pen-nib"></i> Custom
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT INPUT -->
+    <div class="sec-card highlight">
+      <div class="sec-lbl"><i class="fa-solid fa-pencil"></i> What's it about?</div>
+      <textarea id="content-input" placeholder="Describe your topic, project, achievement, or idea... The more detail you give, the better the post." rows="5"></textarea>
+      <div style="display:flex;gap:.6rem">
+        <div style="flex:1">
+          <div class="sec-lbl" style="margin-bottom:.4rem"><i class="fa-solid fa-user"></i> Your Name / Role (optional)</div>
+          <input type="text" id="author-input" placeholder="e.g. Anurag Rajput, Data Science Student">
+        </div>
+      </div>
+    </div>
+
+    <!-- TONE -->
+    <div class="sec-card">
+      <div class="sec-lbl"><i class="fa-solid fa-sliders"></i> Tone</div>
+      <div class="tone-row">
+        <button class="tone-btn active" data-t="professional" onclick="setTone(this)">
+          <i class="fa-solid fa-tie" style="margin-right:.3rem"></i> Professional
+        </button>
+        <button class="tone-btn" data-t="casual" onclick="setTone(this)">
+          <i class="fa-solid fa-mug-hot" style="margin-right:.3rem"></i> Casual
+        </button>
+        <button class="tone-btn" data-t="viral" onclick="setTone(this)">
+          <i class="fa-solid fa-bolt" style="margin-right:.3rem"></i> Viral
+        </button>
+      </div>
+    </div>
+
+    <!-- OPTIONS -->
+    <div class="sec-card">
+      <div class="sec-lbl"><i class="fa-solid fa-gear"></i> Options</div>
+      <div class="toggles-row">
+        <label class="toggle-item">
+          <input type="checkbox" id="opt-emoji" checked> Use emojis
+        </label>
+        <label class="toggle-item">
+          <input type="checkbox" id="opt-hooks" checked> Hook lines
+        </label>
+        <label class="toggle-item">
+          <input type="checkbox" id="opt-hashtags" checked> Hashtags
+        </label>
+        <label class="toggle-item">
+          <input type="checkbox" id="opt-cta" checked> Call to action
+        </label>
+      </div>
+    </div>
+
+    <!-- GENERATE -->
+    <button class="gen-btn" id="gen-btn" onclick="generate()">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Post
+    </button>
+    <div class="loading-bar" id="loading-bar"><div class="loading-fill"></div></div>
+
+  </div>
+
+  <!-- RIGHT COLUMN — OUTPUT -->
+  <div style="display:flex;flex-direction:column;gap:1rem">
+
+    <!-- PLACEHOLDER when nothing generated -->
+    <div class="sec-card" id="placeholder-card" style="min-height:260px;align-items:center;justify-content:center;gap:.6rem;text-align:center">
+      <i class="fa-brands fa-linkedin" style="font-size:2.5rem;color:var(--txt3)"></i>
+      <span style="font-family:var(--fm);font-size:.65rem;color:var(--txt3);text-transform:uppercase;letter-spacing:.15em">Your post will appear here</span>
+      <span style="font-family:var(--fm);font-size:.58rem;color:var(--txt3);opacity:.6">Fill the form and hit Generate</span>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="output-panel" id="output-panel">
+
+      <!-- POST PREVIEW CARD -->
+      <div class="sec-card highlight" style="padding:0;overflow:hidden">
+        <div class="post-card-header">
+          <div class="post-avatar" id="post-avatar">AR</div>
+          <div class="post-author">
+            <div class="post-author-name" id="post-author-name">Anurag Rajput</div>
+            <div class="post-author-sub" id="post-author-sub">Data Science Student · Just now</div>
+          </div>
+          <i class="fa-brands fa-linkedin post-linkedin-badge"></i>
+        </div>
+
+        <!-- Tone tabs on post -->
+        <div class="post-tabs" id="post-tabs"></div>
+
+        <!-- Post body (editable) -->
+        <div class="post-body" id="post-body" contenteditable="true" spellcheck="false">
+          <div class="post-text" id="post-text"></div>
+        </div>
+
+        <!-- Char count -->
+        <div class="char-bar">
+          <span class="char-count" id="char-count">0 / 3000</span>
+          <div class="char-fill-wrap">
+            <div class="char-fill" id="char-fill" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Hashtags -->
+        <div class="hashtag-wrap" id="hashtag-wrap" style="display:none"></div>
+      </div>
+
+      <!-- HOOK LINES -->
+      <div class="sec-card" id="hooks-card" style="display:none">
+        <div class="sec-lbl"><i class="fa-solid fa-fish-fins"></i> Hook Lines — click to use</div>
+        <div id="hooks-list"></div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="actions-row">
+        <button class="act-btn" id="copy-btn" onclick="copyPost()">
+          <i class="fa-solid fa-copy"></i> Copy Post
+        </button>
+        <button class="act-btn linkedin-share" onclick="shareLinkedIn()">
+          <i class="fa-brands fa-linkedin"></i> Post on LinkedIn
+        </button>
+        <button class="act-btn" onclick="regenerate()">
+          <i class="fa-solid fa-rotate"></i> Regenerate
+        </button>
+        <button class="act-btn" onclick="resetAll()">
+          <i class="fa-solid fa-plus"></i> New Post
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer-bar">
+  <span class="footer-credit">Built by <a href="https://instai4.github.io/PORT-FOLIO/" target="_blank">ANURAG RAJPUT</a> &middot; Data Science Student @ DBUU</span>
+  <div class="footer-links">
+    <a href="https://github.com/instai4" target="_blank"><i class="fa-brands fa-github"></i></a>
+    <a href="https://www.linkedin.com/in/anurag-singh-43230a380/" target="_blank"><i class="fa-brands fa-linkedin"></i></a>
+    <a href="https://instai4.github.io/PORT-FOLIO/" target="_blank"><i class="fa-solid fa-globe"></i></a>
+  </div>
+</div>
+
+<script>
+/* ── CURSOR ── */
+const cur = document.getElementById('cursor');
+document.addEventListener('mousemove', e => { cur.style.left=e.clientX+'px'; cur.style.top=e.clientY+'px'; });
+document.querySelectorAll('a,button,label,.type-chip,.tone-btn,.hook-item,.hashtag').forEach(el => {
+  el.addEventListener('mouseenter',()=>{ cur.style.width='28px';cur.style.height='28px';cur.style.background='rgba(10,102,194,.2)'; });
+  el.addEventListener('mouseleave',()=>{ cur.style.width='12px';cur.style.height='12px';cur.style.background='rgba(10,102,194,.2)'; });
+});
+
+/* ── STATE ── */
+let currentType = 'topic';
+let currentTone = 'professional';
+let lastResult = null;
+let variants = {}; // { professional: text, casual: text, viral: text }
+let currentVariant = 'professional';
+
+/* ── TYPE ── */
+function setType(el) {
+  document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentType = el.dataset.type;
+  const placeholders = {
+    topic:       'What topic or idea do you want to share? e.g. "Why Python is great for data science beginners"',
+    project:     'Describe your project — what it does, what you built, what problem it solves...',
+    job:         'What\'s your job update? New role, promotion, new company, internship...',
+    achievement: 'What did you achieve? Certification, milestone, competition win, launch...',
+    opinion:     'What\'s your hot take or controversial opinion in your field?',
+    custom:      'Write your own custom prompt for the AI — total freedom.',
+  };
+  document.getElementById('content-input').placeholder = placeholders[currentType] || '';
+}
+
+/* ── TONE ── */
+function setTone(el) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentTone = el.dataset.t;
+  // switch displayed variant if already generated
+  if (variants[currentTone]) showVariant(currentTone);
+}
+
+/* ── GENERATE ── */
+async function generate() {
+  const content = document.getElementById('content-input').value.trim();
+  if (!content) { alert('Tell me what the post is about first.'); return; }
+
+  const author    = document.getElementById('author-input').value.trim() || 'Anurag Rajput';
+  const useEmoji  = document.getElementById('opt-emoji').checked;
+  const useHooks  = document.getElementById('opt-hooks').checked;
+  const useHash   = document.getElementById('opt-hashtags').checked;
+  const useCta    = document.getElementById('opt-cta').checked;
+
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('gen-btn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+  document.getElementById('loading-bar').classList.add('show');
+  document.getElementById('placeholder-card').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/linkedin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, type: currentType, tone: currentTone, author, useEmoji, useHooks, useHash, useCta })
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Server error');
+    const data = await res.json();
+    lastResult = data;
+    variants = data.variants || {};
+
+    // Update author display
+    const initials = author.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('post-avatar').textContent = initials;
+    document.getElementById('post-author-name').textContent = author;
+    document.getElementById('post-author-sub').textContent = (data.role || 'Professional') + ' · Just now';
+
+    // Build tone tabs
+    buildToneTabs(data.variants);
+
+    // Show current tone
+    showVariant(currentTone);
+
+    // Hooks
+    if (useHooks && data.hooks?.length) {
+      const hc = document.getElementById('hooks-card');
+      hc.style.display = 'flex';
+      document.getElementById('hooks-list').innerHTML = data.hooks.map(h =>
+        `<div class="hook-item" onclick="useHook(this)"><i class="fa-solid fa-arrow-right"></i>${h}</div>`
+      ).join('');
+    } else {
+      document.getElementById('hooks-card').style.display = 'none';
+    }
+
+    document.getElementById('output-panel').classList.add('show');
+    document.getElementById('output-panel').scrollIntoView({behavior:'smooth',block:'start'});
+
+  } catch(e) {
+    alert('Error: ' + e.message);
+    document.getElementById('placeholder-card').style.display = 'flex';
+  } finally {
+    document.getElementById('gen-btn').disabled = false;
+    document.getElementById('gen-btn').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate Post';
+    document.getElementById('loading-bar').classList.remove('show');
+  }
+}
+
+/* ── BUILD TONE TABS ── */
+function buildToneTabs(variants) {
+  const tabs = document.getElementById('post-tabs');
+  const tones = ['professional','casual','viral'];
+  const labels = { professional:'Professional', casual:'Casual', viral:'Viral' };
+  tabs.innerHTML = tones.filter(t => variants[t]).map(t =>
+    `<button class="post-tab ${t===currentTone?'active':''}" data-tone="${t}" onclick="switchPostTone('${t}')">${labels[t]}</button>`
+  ).join('');
+}
+
+/* ── SWITCH POST TONE ── */
+function switchPostTone(tone) {
+  currentTone = tone;
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.toggle('active', b.dataset.t===tone));
+  document.querySelectorAll('.post-tab').forEach(t => t.classList.toggle('active', t.dataset.tone===tone));
+  showVariant(tone);
+}
+
+/* ── SHOW VARIANT ── */
+function showVariant(tone) {
+  const text = variants[tone] || variants[currentTone] || '';
+  const postText = document.getElementById('post-text');
+  postText.innerHTML = '';
+
+  // Render lines
+  const lines = text.split('\n');
+  lines.forEach((line, i) => {
+    const p = document.createElement('div');
+    p.style.marginBottom = i < lines.length-1 ? '.5rem' : '0';
+    p.textContent = line;
+    postText.appendChild(p);
+  });
+
+  updateCharCount(text);
+
+  // Hashtags
+  if (lastResult?.hashtags?.length) {
+    const hw = document.getElementById('hashtag-wrap');
+    hw.style.display = 'flex';
+    hw.innerHTML = lastResult.hashtags.map(h =>
+      `<span class="hashtag" onclick="copyHashtag(this)">${h}</span>`
+    ).join('');
+  }
+}
+
+/* ── CHAR COUNT ── */
+function updateCharCount(text) {
+  const len = text.length;
+  const max = 3000;
+  const pct = Math.min(100, (len/max)*100);
+  const el = document.getElementById('char-count');
+  const fill = document.getElementById('char-fill');
+  el.textContent = `${len} / ${max}`;
+  el.className = 'char-count' + (len > max ? ' over' : len > 2500 ? ' warn' : '');
+  fill.style.width = pct + '%';
+  fill.style.background = len > max ? 'var(--red)' : len > 2500 ? 'var(--gold)' : 'var(--blue2)';
+}
+
+/* track edits in post body */
+document.getElementById('post-body').addEventListener('input', () => {
+  updateCharCount(document.getElementById('post-body').innerText);
+});
+
+/* ── USE HOOK ── */
+function useHook(el) {
+  const hook = el.textContent.replace(/^→?\s*/, '').trim();
+  const postText = document.getElementById('post-text');
+  // prepend hook as first line
+  const current = postText.innerText;
+  const lines = current.split('\n');
+  lines[0] = hook;
+  postText.innerHTML = '';
+  lines.forEach((line, i) => {
+    const p = document.createElement('div');
+    p.style.marginBottom = i < lines.length-1 ? '.5rem' : '0';
+    p.textContent = line;
+    postText.appendChild(p);
+  });
+  updateCharCount(postText.innerText);
+}
+
+/* ── COPY HASHTAG ── */
+function copyHashtag(el) {
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const orig = el.style.background;
+    el.style.background = 'rgba(0,230,118,.15)';
+    el.style.borderColor = 'var(--green)';
+    el.style.color = 'var(--green)';
+    setTimeout(() => { el.style.background=''; el.style.borderColor=''; el.style.color=''; }, 1000);
+  });
+}
+
+/* ── COPY POST ── */
+function copyPost() {
+  const text = document.getElementById('post-body').innerText;
+  const hashtags = lastResult?.hashtags?.length
+    ? '\n\n' + lastResult.hashtags.join(' ')
+    : '';
+  navigator.clipboard.writeText(text + hashtags).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('copied');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '<i class="fa-solid fa-copy"></i> Copy Post'; }, 2000);
+  });
+}
+
+/* ── SHARE LINKEDIN ── */
+function shareLinkedIn() {
+  const text = encodeURIComponent(document.getElementById('post-body').innerText.slice(0,700));
+  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=https://instai4.github.io/PORT-FOLIO/&summary=${text}`, '_blank');
+}
+
+/* ── REGENERATE ── */
+async function regenerate() {
+  document.getElementById('output-panel').classList.remove('show');
+  await generate();
+}
+
+/* ── RESET ── */
+function resetAll() {
+  document.getElementById('content-input').value = '';
+  document.getElementById('author-input').value = '';
+  document.getElementById('output-panel').classList.remove('show');
+  document.getElementById('placeholder-card').style.display = 'flex';
+  lastResult = null; variants = {};
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ── ENTER TO GENERATE ── */
+document.getElementById('content-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) generate();
+});
+</script>
+</body>
+</html>
