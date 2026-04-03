@@ -546,8 +546,13 @@ async function generate() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content, type: currentType, tone: currentTone, author, useEmoji, useHooks, useHash, useCta })
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Server error');
-    const data = await res.json();
+    // Safe parse — never crash on empty/invalid body
+    const rawText = await res.text();
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch { throw new Error('AI returned an invalid response. Please try again.'); }
+    if (!res.ok) throw new Error(data?.error || 'Server error (' + res.status + ')');
+    if (!data?.variants) throw new Error('AI response was incomplete. Please try again.');
     lastResult = data;
     variants = data.variants || {};
 

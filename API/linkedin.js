@@ -5,6 +5,17 @@
 //
 // Env vars: XAI_API_KEY, GROQ_API_KEY, GEMINI_API_KEY
 
+// Helper: fetch with timeout so we don't hang Vercel's 10s limit
+async function fetchWithTimeout(url, options, ms = 8000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -100,7 +111,7 @@ IMPORTANT for each variant:
     const XKEY = process.env.XAI_API_KEY;
     if (XKEY) {
       try {
-        const r = await fetch('https://api.x.ai/v1/chat/completions', {
+        const r = await fetchWithTimeout('https://api.x.ai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${XKEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -128,7 +139,7 @@ IMPORTANT for each variant:
       const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
       for (const model of models) {
         try {
-          const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          const r = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GQKEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -157,7 +168,7 @@ IMPORTANT for each variant:
       const models = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-8b', 'gemini-2.5-flash'];
       for (const model of models) {
         try {
-          const r = await fetch(
+          const r = await fetchWithTimeout(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GKEY}`,
             {
               method: 'POST',
@@ -185,7 +196,9 @@ IMPORTANT for each variant:
       }
     }
 
-    return res.status(500).json({ error: 'All AI providers failed. Check your API keys in Vercel env vars.' });
+    return res.status(500).json({
+      error: 'All AI providers failed. Make sure XAI_API_KEY, GROQ_API_KEY, or GEMINI_API_KEY is set in Vercel Environment Variables. At least one key is required.'
+    });
 
   } catch(e) {
     console.error('[LINKEDIN] Handler error:', e);
@@ -194,7 +207,19 @@ IMPORTANT for each variant:
 }
 
 function safeParseJSON(text) {
+  if (!text || !text.trim()) return null;
   try {
-    return JSON.parse(text.replace(/```json|```/g, '').trim());
-  } catch { return null; }
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    // Must have variants to be valid
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    // Try extracting JSON from mixed text
+    try {
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+    } catch {}
+    return null;
+  }
 }
