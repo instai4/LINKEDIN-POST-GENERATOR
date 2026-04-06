@@ -1,12 +1,14 @@
 // api/linkedin.js
 // LINKEDIN.exe — AI LinkedIn Post Generator
-// Returns 3 tone variants (professional/casual/viral) + hooks + hashtags
+// Simpler per-variant generation for maximum reliability
 // Grok → Groq → Gemini fallback
 //
-// Env vars: XAI_API_KEY, GROQ_API_KEY, GEMINI_API_KEY
+// Env vars (add in Vercel → Settings → Environment Variables):
+//   GEMINI_API_KEY  — Google Gemini  (https://aistudio.google.com/app/apikey)  ← easiest free key
+//   GROQ_API_KEY    — Groq           (https://console.groq.com)
+//   XAI_API_KEY     — xAI / Grok     (https://console.x.ai)
 
-// Helper: fetch with timeout so we don't hang Vercel's 10s limit
-async function fetchWithTimeout(url, options, ms = 8000) {
+async function fetchWithTimeout(url, options, ms = 9000) {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -14,6 +16,64 @@ async function fetchWithTimeout(url, options, ms = 8000) {
   } finally {
     clearTimeout(id);
   }
+}
+
+async function callAI(prompt, XKEY, GQKEY, GKEY) {
+  const messages = [{ role: 'user', content: prompt }];
+
+  if (XKEY) {
+    try {
+      const r = await fetchWithTimeout('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${XKEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'grok-3-mini', messages, max_tokens: 800, temperature: 0.85 })
+      });
+      const d = await r.json();
+      const text = d?.choices?.[0]?.message?.content?.trim();
+      if (r.ok && text) return text;
+      console.log('[LINKEDIN] Grok failed:', r.status, d?.error?.message);
+    } catch(e) { console.log('[LINKEDIN] Grok error:', e.message); }
+  }
+
+  if (GQKEY) {
+    for (const model of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']) {
+      try {
+        const r = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${GQKEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, messages, max_tokens: 800, temperature: 0.85 })
+        });
+        const d = await r.json();
+        const text = d?.choices?.[0]?.message?.content?.trim();
+        if (r.ok && text) return text;
+        console.log('[LINKEDIN] Groq failed:', r.status, d?.error?.message);
+      } catch(e) { console.log('[LINKEDIN] Groq error:', e.message); }
+    }
+  }
+
+  if (GKEY) {
+    for (const model of ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b']) {
+      try {
+        const r = await fetchWithTimeout(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GKEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: { maxOutputTokens: 800, temperature: 0.85 }
+            })
+          }
+        );
+        const d = await r.json();
+        const text = d?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (r.ok && text) return text;
+        console.log('[LINKEDIN] Gemini failed:', r.status, d?.error?.message);
+      } catch(e) { console.log('[LINKEDIN] Gemini error:', e.message); }
+    }
+  }
+
+  return null;
 }
 
 export default async function handler(req, res) {
@@ -24,202 +84,63 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { content, type, tone, author, useEmoji, useHooks, useHash, useCta } = req.body || {};
+    const { content, type, author, useEmoji, useHooks, useHash, useCta } = req.body || {};
     if (!content) return res.status(400).json({ error: 'No content provided.' });
 
-    // Post type context
-    const typeMap = {
-      topic:       'a thought leadership post about a topic or idea',
-      project:     'a project showcase post about something they built',
-      job:         'a job update post (new role, promotion, internship, etc.)',
-      achievement: 'an achievement post (milestone, award, certification, launch)',
-      opinion:     'a hot take or opinion post designed to spark discussion',
-      custom:      'a LinkedIn post based on this custom prompt',
-    };
-    const typeContext = typeMap[type] || typeMap.topic;
-
-    // Tone instructions
-    const toneInstructions = {
-      professional: `Professional tone: Polished, credible, structured. Use clear paragraphs. Start with a strong insight or statement. Include learnings. End with a CTA. Sound like a senior professional sharing wisdom. Minimal but purposeful emojis if enabled.`,
-      casual:       `Casual tone: Conversational, warm, relatable. Write like talking to a friend. Use short punchy sentences. Show personality and vulnerability. More emojis if enabled. Should feel human, not corporate.`,
-      viral:        `Viral tone: Engineered to go viral on LinkedIn. Use the hook → story → lesson → CTA structure. First line must stop the scroll. Use line breaks aggressively (every 1-2 sentences). Numbered lists or bold reveals. Controversial or counterintuitive angle. Maximum engagement bait without being cringe.`,
-    };
-
-    const emojiRule = useEmoji
-      ? 'Use relevant emojis naturally throughout.'
-      : 'Do NOT use any emojis at all.';
-    const ctaRule = useCta
-      ? 'End with a strong call to action (question, comment prompt, or share ask).'
-      : 'No explicit call to action needed.';
-
-    const systemPrompt = `You are LINKEDIN.exe, an expert LinkedIn content strategist and copywriter.
-You write high-performing LinkedIn posts that get real engagement.
-You understand the LinkedIn algorithm, what hooks stop the scroll, and how to structure posts for maximum reach.
-Always respond ONLY with valid JSON. No markdown, no explanation outside JSON.`;
-
-    const userMsg = `Create LinkedIn posts for this person:
-Author: ${author || 'a professional'}
-Post type: ${typeContext}
-Content/Topic: ${content}
-
-${emojiRule}
-${ctaRule}
-
-Generate ALL THREE tone variants, plus hooks and hashtags.
-
-Respond ONLY with this exact JSON:
-{
-  "variants": {
-    "professional": "Full professional tone LinkedIn post here. Use \\n for line breaks.",
-    "casual": "Full casual tone LinkedIn post here. Use \\n for line breaks.",
-    "viral": "Full viral tone LinkedIn post here. Use \\n for line breaks aggressively for scannability."
-  },
-  "role": "Inferred short role/title of the author based on context (e.g. 'Data Science Student')",
-  "hooks": ${useHooks ? `[
-    "Hook line option 1 — short, punchy opening that stops the scroll",
-    "Hook line option 2 — question or bold statement",
-    "Hook line option 3 — counterintuitive or surprising opener",
-    "Hook line option 4 — personal story opener",
-    "Hook line option 5 — statistic or fact opener"
-  ]` : '[]'},
-  "hashtags": ${useHash ? `[
-    "#RelevantHashtag1",
-    "#RelevantHashtag2",
-    "#RelevantHashtag3",
-    "#RelevantHashtag4",
-    "#RelevantHashtag5",
-    "#RelevantHashtag6",
-    "#RelevantHashtag7",
-    "#RelevantHashtag8"
-  ]` : '[]'}
-}
-
-IMPORTANT for each variant:
-- Professional: 150-250 words, structured paragraphs, credible voice
-- Casual: 100-180 words, short sentences, conversational
-- Viral: 200-350 words, aggressive line breaks (every 1-2 sentences), hook → story → lesson → CTA structure
-- Use \\n (newline) for ALL line breaks inside the JSON strings
-- Make each variant genuinely different in structure and voice, not just tone
-- Posts must be specific to the content given — no generic fluff`;
-
-    const openAiMessages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMsg }
-    ];
-
-    // ── Grok ──
-    const XKEY = process.env.XAI_API_KEY;
-    if (XKEY) {
-      try {
-        const r = await fetchWithTimeout('https://api.x.ai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${XKEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'grok-3-mini',
-            messages: openAiMessages,
-            max_tokens: 2500,
-            temperature: 0.85,
-            response_format: { type: 'json_object' }
-          })
-        });
-        const d = await r.json();
-        if (r.ok) {
-          const text = d?.choices?.[0]?.message?.content;
-          if (text) {
-            const parsed = safeParseJSON(text);
-            if (parsed?.variants) return res.status(200).json(parsed);
-          }
-        } else { console.log('[LINKEDIN] Grok failed:', r.status, d?.error?.message); }
-      } catch(e) { console.log('[LINKEDIN] Grok error:', e.message); }
-    }
-
-    // ── Groq ──
+    const XKEY  = process.env.XAI_API_KEY;
     const GQKEY = process.env.GROQ_API_KEY;
-    if (GQKEY) {
-      const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
-      for (const model of models) {
-        try {
-          const r = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${GQKEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model,
-              messages: openAiMessages,
-              max_tokens: 2500,
-              temperature: 0.85,
-              response_format: { type: 'json_object' }
-            })
-          });
-          const d = await r.json();
-          if (r.ok) {
-            const text = d?.choices?.[0]?.message?.content;
-            if (text) {
-              const parsed = safeParseJSON(text);
-              if (parsed?.variants) return res.status(200).json(parsed);
-            }
-          } else { console.log(`[LINKEDIN] Groq ${model} failed:`, r.status); }
-        } catch(e) { console.log(`[LINKEDIN] Groq ${model} error:`, e.message); }
+    const GKEY  = process.env.GEMINI_API_KEY;
+
+    if (!XKEY && !GQKEY && !GKEY) {
+      return res.status(500).json({
+        error: 'No API keys found. Go to Vercel → your project → Settings → Environment Variables. Add GEMINI_API_KEY (get free key at aistudio.google.com). Then redeploy.'
+      });
+    }
+
+    const emojiRule = useEmoji ? 'Use relevant emojis.' : 'NO emojis at all.';
+    const ctaRule   = useCta   ? 'End with a call to action (question or share prompt).' : '';
+    const authorStr = author   ? `Author: ${author}.` : '';
+    const typeMap   = { topic:'thought leadership', project:'project showcase', job:'job update', achievement:'achievement', opinion:'hot take / opinion', custom:'custom post' };
+    const typeStr   = typeMap[type] || 'LinkedIn post';
+
+    const base = `${authorStr}\nTopic: ${content}\n${emojiRule} ${ctaRule}`;
+
+    const [profText, casText, virText] = await Promise.all([
+      callAI(`Write a professional LinkedIn post (${typeStr}).\n${base}\nRules: Polished, credible, 150-220 words, clear paragraphs, strong opening, share a lesson.\nOutput ONLY the post text. No labels, no JSON, no quotes.`, XKEY, GQKEY, GKEY),
+      callAI(`Write a casual conversational LinkedIn post (${typeStr}).\n${base}\nRules: Friendly, relatable, 100-160 words, short sentences, human not corporate.\nOutput ONLY the post text. No labels, no JSON, no quotes.`, XKEY, GQKEY, GKEY),
+      callAI(`Write a viral LinkedIn post (${typeStr}) for maximum engagement.\n${base}\nRules: Hook-Story-Lesson-CTA structure. First line stops the scroll. New line every 1-2 sentences. 200-300 words. Bold or counterintuitive angle.\nOutput ONLY the post text. No labels, no JSON, no quotes.`, XKEY, GQKEY, GKEY),
+    ]);
+
+    if (!profText && !casText && !virText) {
+      return res.status(500).json({ error: 'All AI providers failed. Check your API keys have quota remaining.' });
+    }
+
+    const fallback = profText || casText || virText;
+    const variants = {
+      professional: profText || fallback,
+      casual:       casText  || fallback,
+      viral:        virText  || fallback,
+    };
+
+    let hooks = [];
+    if (useHooks) {
+      const hookText = await callAI(`Give 5 short LinkedIn hook lines (scroll-stopping openers) for: "${content}".\nOutput a numbered list 1-5. One per line. No explanation.`, XKEY, GQKEY, GKEY);
+      if (hookText) {
+        hooks = hookText.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(l => l.length > 8).slice(0, 5);
       }
     }
 
-    // ── Gemini ──
-    const GKEY = process.env.GEMINI_API_KEY;
-    if (GKEY) {
-      const models = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-8b', 'gemini-2.5-flash'];
-      for (const model of models) {
-        try {
-          const r = await fetchWithTimeout(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GKEY}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: userMsg }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                  maxOutputTokens: 2500,
-                  temperature: 0.85,
-                  responseMimeType: 'application/json'
-                }
-              })
-            }
-          );
-          const d = await r.json();
-          if (r.ok) {
-            const text = d?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              const parsed = safeParseJSON(text);
-              if (parsed?.variants) return res.status(200).json(parsed);
-            }
-          } else { console.log(`[LINKEDIN] Gemini ${model} failed:`, r.status); }
-        } catch(e) { console.log(`[LINKEDIN] Gemini ${model} error:`, e.message); }
-      }
+    let hashtags = [];
+    if (useHash) {
+      const hashText = await callAI(`Give 8 LinkedIn hashtags for: "${content}". Output only hashtags separated by spaces, each starting with #.`, XKEY, GQKEY, GKEY);
+      if (hashText) hashtags = (hashText.match(/#\w+/g) || []).slice(0, 8);
     }
 
-    return res.status(500).json({
-      error: 'All AI providers failed. Make sure XAI_API_KEY, GROQ_API_KEY, or GEMINI_API_KEY is set in Vercel Environment Variables. At least one key is required.'
-    });
+    const role = author && author.includes(',') ? author.split(',')[1].trim() : 'Professional';
+    return res.status(200).json({ variants, hooks, hashtags, role });
 
   } catch(e) {
     console.error('[LINKEDIN] Handler error:', e);
     return res.status(500).json({ error: e.message || 'Server error' });
-  }
-}
-
-function safeParseJSON(text) {
-  if (!text || !text.trim()) return null;
-  try {
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    // Must have variants to be valid
-    if (!parsed || typeof parsed !== 'object') return null;
-    return parsed;
-  } catch {
-    // Try extracting JSON from mixed text
-    try {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]);
-    } catch {}
-    return null;
   }
 }
