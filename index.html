@@ -546,13 +546,17 @@ async function generate() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content, type: currentType, tone: currentTone, author, useEmoji, useHooks, useHash, useCta })
     });
-    // Safe parse — never crash on empty/invalid body
+    // Safe parse — show real server error
     const rawText = await res.text();
+    console.log('[DEBUG] Raw API response:', rawText.slice(0, 500));
     let data;
-    try { data = JSON.parse(rawText); }
-    catch { throw new Error('AI returned an invalid response. Please try again.'); }
-    if (!res.ok) throw new Error(data?.error || 'Server error (' + res.status + ')');
-    if (!data?.variants) throw new Error('AI response was incomplete. Please try again.');
+    try {
+      data = JSON.parse(rawText);
+    } catch(parseErr) {
+      throw new Error('Server returned non-JSON: ' + rawText.slice(0, 200));
+    }
+    if (!res.ok) throw new Error(data?.error || 'HTTP ' + res.status);
+    if (!data?.variants) throw new Error('Missing variants. Server said: ' + JSON.stringify(data).slice(0, 200));
     lastResult = data;
     variants = data.variants || {};
 
@@ -583,6 +587,11 @@ async function generate() {
     document.getElementById('output-panel').scrollIntoView({behavior:'smooth',block:'start'});
 
   } catch(e) {
+    // Show full error in debug panel
+    const dp = document.getElementById('debug-panel');
+    const dc = document.getElementById('debug-content');
+    dc.innerHTML = '<b style="color:#ffaa44">Error:</b> ' + e.message + '<br><br><b>Check Vercel logs:</b> vercel.com → project → Deployments → Functions tab';
+    dp.style.display = 'block';
     alert('Error: ' + e.message);
     document.getElementById('placeholder-card').style.display = 'flex';
   } finally {
@@ -725,5 +734,18 @@ document.getElementById('content-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.ctrlKey) generate();
 });
 </script>
+
+<!-- DEBUG PANEL -->
+<div id="debug-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;
+  background:#0a0a0a;border-top:2px solid #ff4444;padding:.8rem 1.2rem;
+  font-family:monospace;font-size:.7rem;color:#ff6666;max-height:200px;overflow-y:auto">
+  <div style="display:flex;justify-content:space-between;margin-bottom:.4rem">
+    <span style="color:#ff4444;font-weight:bold">DEBUG OUTPUT</span>
+    <button onclick="document.getElementById('debug-panel').style.display='none'"
+      style="background:transparent;border:1px solid #ff4444;color:#ff4444;
+      padding:2px 8px;cursor:pointer;font-family:monospace;font-size:.65rem">CLOSE</button>
+  </div>
+  <div id="debug-content"></div>
+</div>
 </body>
 </html>
