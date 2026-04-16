@@ -9,7 +9,7 @@ A LinkedIn post generator designed to assist in crafting compelling descriptions
 *   **AI-Powered:** Leverages artificial intelligence to generate high-quality content.
 *   **Fast:** Delivers results quickly, saving you time.
 *   **Easy to Use:** Intuitive interface for effortless post creation.
-*   **Versatile:** Suitable for generating descriptions for projects, topics, and various professional content.
+*   **Versatile:** Suitable for generating descriptions for projects, topics, and various professional content
 
 ---
 
